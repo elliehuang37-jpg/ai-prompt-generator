@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="業務、行銷、訓練三部門各 20 個工作場景，輸入目的與任務，即時生成結構完整、可直接貼到 AI 工具的提示詞。">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>AI 工作提示詞生成器</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: 部門頁籤 + 場景格 在上方；下方左右兩欄：左邊填需求、右邊即時產生提示詞（桌機固定、手機堆疊） */
+:root{
+  --bg:#f2f5f7; --surface:#ffffff; --sunken:#e8edf1; --ink:#13202b; --muted:#566673; --line:#d6dee4;
+  --sales:#0b6e64; --sales-soft:#dff1ee;
+  --mkt:#b0215f; --mkt-soft:#f8e3ec;
+  --train:#3f3fb5; --train-soft:#e6e6f8;
+  --code-bg:#0f1a23; --code-ink:#dbe6ee; --code-mute:#7f93a3;
+  --ok:#1f7a3f; --warn:#a15c00;
+  --accent:var(--sales); --accent-soft:var(--sales-soft);
+  --f-display:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono","Noto Sans TC",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1419; --surface:#161f27; --sunken:#1c2731; --ink:#e4ecf1; --muted:#93a4b1; --line:#283641;
+  --sales:#4cc7b6; --sales-soft:#143430; --mkt:#f07aac; --mkt-soft:#3a1828; --train:#a3a8ff; --train-soft:#232450;
+  --code-bg:#0a1016; --code-ink:#dbe6ee; --code-mute:#7f93a3; --ok:#5fcf86; --warn:#f0b35a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1419; --surface:#161f27; --sunken:#1c2731; --ink:#e4ecf1; --muted:#93a4b1; --line:#283641;
+  --sales:#4cc7b6; --sales-soft:#143430; --mkt:#f07aac; --mkt-soft:#3a1828; --train:#a3a8ff; --train-soft:#232450;
+  --code-bg:#0a1016; --code-ink:#dbe6ee; --code-mute:#7f93a3; --ok:#5fcf86; --warn:#f0b35a; color-scheme:dark}
+body{--code-accent:#62d4c3}
+body[data-dept="mkt"]{--accent:var(--mkt);--accent-soft:var(--mkt-soft);--code-accent:#ff94c2}
+body[data-dept="train"]{--accent:var(--train);--accent-soft:var(--train-soft);--code-accent:#b6b9ff}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 48px}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+h1,h2,h3{text-wrap:balance;margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* header */
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+h1{font-family:var(--f-display);font-weight:900;font-size:clamp(28px,4.4vw,42px);letter-spacing:-.01em;line-height:1.15}
+h1 .hl{color:var(--accent);transition:color .25s}
+.lede{color:var(--muted);max-width:60ch;margin:6px 0 0}
+.formula{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--muted)}
+.formula b{font-weight:700;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
+
+/* dept tabs + search */
+.bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 16px;cursor:pointer;display:flex;gap:8px;align-items:center;font-weight:700}
+.tab small{font-family:var(--f-mono);font-weight:500;color:var(--muted);font-size:12px}
+.tab[data-d="sales"]{--c:var(--sales)} .tab[data-d="mkt"]{--c:var(--mkt)} .tab[data-d="train"]{--c:var(--train)}
+.tab .dot{width:9px;height:9px;border-radius:50%;background:var(--c)}
+.tab[aria-selected="true"]{background:var(--c);border-color:var(--c);color:var(--surface)}
+.tab[aria-selected="true"] small{color:var(--surface);opacity:.8}
+.tab[aria-selected="true"] .dot{background:var(--surface)}
+.search{position:relative;flex:1 1 240px;max-width:340px}
+.search input{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px 8px 36px}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;stroke:var(--muted)}
+
+/* scenario grid */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.sc{display:flex;align-items:center;gap:10px;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 12px;cursor:pointer;min-width:0}
+.sc:hover{border-color:var(--accent)}
+.sc .n{font-family:var(--f-mono);font-size:12px;color:var(--muted);width:20px;flex:none;font-variant-numeric:tabular-nums}
+.sc .t{flex:1;min-width:0;font-size:14px;font-weight:500;line-height:1.35}
+.sc .k{flex:none;font-size:11px;border-radius:4px;padding:1px 6px;background:var(--sunken);color:var(--muted)}
+.sc .k.image{background:var(--accent-soft);color:var(--accent)}
+.sc[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+.sc .dl{font-size:11px;color:var(--muted)}
+.empty{color:var(--muted);padding:12px 0}
+
+/* workspace */
+.work{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:20px;align-items:start}
+@media (max-width:900px){.work{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:18px;min-width:0}
+.ptitle{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.ptitle h2{font-size:20px;font-weight:900}
+.ptitle .role{font-size:13px;color:var(--muted);margin-top:2px}
+.btns{display:flex;gap:6px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;font-weight:500}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--surface);font-weight:700}
+.btn.primary:hover{filter:brightness(1.08);color:var(--surface)}
+
+.step{display:flex;flex-direction:column;gap:10px}
+.step h3{font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--accent);display:flex;gap:8px;align-items:center}
+.step h3 span{font-family:var(--f-mono);display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--accent-soft);font-size:11px}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:13px;font-weight:700}
+.field label em{font-style:normal;color:var(--mkt);font-weight:500;margin-left:4px;font-size:12px}
+.field label i{font-style:normal;color:var(--muted);font-weight:400;margin-left:4px;font-size:12px}
+.field input,.field textarea,.field select{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px;min-width:0}
+.field textarea{resize:vertical;min-height:64px}
+.field input::placeholder,.field textarea::placeholder{color:var(--muted);opacity:.75}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:6px 14px}
+.opts label{display:flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer}
+.opts input{margin-top:4px;accent-color:var(--accent)}
+
+/* output */
+.out{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+@media (max-width:900px){.out{position:static}}
+.meter{display:flex;flex-direction:column;gap:6px}
+.meter .lbl{display:flex;justify-content:space-between;font-size:13px}
+.meter .lbl b{font-variant-numeric:tabular-nums}
+.track{height:6px;border-radius:3px;background:var(--sunken);overflow:hidden}
+.fill{height:100%;background:var(--accent);width:0;transition:width .3s}
+.hint{font-size:13px;color:var(--muted)}
+.hint.good{color:var(--ok)}
+pre.prompt{margin:0;background:var(--code-bg);color:var(--code-ink);border-radius:10px;padding:16px 18px;font-family:var(--f-body);font-size:14px;line-height:1.75;white-space:pre-wrap;word-break:break-word;max-height:62vh;overflow:auto}
+@media (max-width:900px){pre.prompt{max-height:none}}
+pre.prompt .h{color:var(--code-accent);font-weight:700}
+pre.prompt .sec{color:#ffd27a;font-weight:700}
+pre.prompt .mute{color:var(--code-mute)}
+pre.prompt .todo{color:#ff9b9b}
+.outfoot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.count{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.tool{font-size:13px;background:var(--sunken);border-radius:8px;padding:10px 12px;color:var(--ink)}
+.tool b{color:var(--accent)}
+.toast{font-size:13px;color:var(--ok);min-height:1em}
+.toast.warn{color:var(--warn)}
+pre.prompt .tag{color:#9fb7c9}
+
+.tips{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.tip{border-top:2px solid var(--line);padding-top:10px;font-size:13px;color:var(--muted)}
+.tip b{display:block;color:var(--ink);font-size:14px;margin-bottom:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Prompt Studio · 3 部門 × 20 場景</div>
+      <h1>AI 工作<span class="hl">提示詞</span>生成器</h1>
+      <p class="lede">選一個工作場景，寫下你想要的結果，系統會組出結構完整的提示詞。複製後貼到 ChatGPT、Claude、Gemini 或生圖工具即可使用。</p>
+    </div>
+    <div class="formula" aria-label="提示詞結構">
+      <b>角色</b>+<b>任務</b>+<b>目的</b>+<b>背景</b>+<b>要求</b>+<b>格式</b>+<b>品質標準</b>
+    </div>
+  </header>
+
+  <div class="bar">
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+      <input id="q" type="search" placeholder="搜尋場景，例如：簡報、海報、話術" aria-label="搜尋場景">
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="work">
+    <section class="panel" aria-label="輸入需求">
+      <div class="ptitle">
+        <div>
+          <h2 id="sTitle"></h2>
+          <div class="role" id="sRole"></div>
+        </div>
+        <div class="btns">
+          <button class="btn" id="exBtn" type="button">填入範例</button>
+          <button class="btn" id="clrBtn" type="button">清空</button>
+        </div>
+      </div>
+
+      <div class="step">
+        <h3><span>1</span>你想要的結果</h3>
+        <div class="field"><label for="goal">目的／期望成果<em>必填</em></label><input id="goal"></div>
+        <div class="field"><label for="desc">任務簡述<em>必填</em></label><textarea id="desc" rows="2"></textarea></div>
+      </div>
+
+      <div class="step">
+        <h3><span>2</span>補充細節</h3>
+        <div class="field"><label for="company">公司／品牌與產業<i>填一次即可，這台裝置會記住</i></label><input id="company" data-keep="1" placeholder="例：台灣直銷保養品牌，主要客群為 30–55 歲女性"></div>
+        <div id="dyn" class="row"></div>
+        <div class="field" id="audWrap"><label for="aud">目標受眾<i>誰會看／誰會用</i></label><input id="aud"></div>
+        <div class="field"><label for="bg">背景資料<i>選填，可貼上數據、筆記或現有內容</i></label><textarea id="bg" rows="3" placeholder="例：去年活動成效、公司產品資訊、會議筆記……（請勿貼入客戶個資或機密）"></textarea></div>
+      </div>
+
+      <div class="step">
+        <h3><span>3</span>輸出設定</h3>
+        <div id="kindCtl" class="row"></div>
+        <div class="opts" id="opts">
+          <label><input type="checkbox" id="oAsk">開始前先問我關鍵問題，再產出</label>
+          <label><input type="checkbox" id="oMulti">提供多個版本讓我挑選</label>
+          <label><input type="checkbox" id="oCrit" checked>交付前自我檢查並修正</label>
+          <label><input type="checkbox" id="oTbd" checked>資訊不足時標示【待確認】，不可捏造</label>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel out" aria-label="生成的提示詞">
+      <div class="ptitle">
+        <div>
+          <h2>生成的提示詞</h2>
+          <div class="role">輸入時即時更新</div>
+        </div>
+        <div class="btns"><button class="btn primary" id="copyBtn" type="button">複製提示詞</button></div>
+      </div>
+      <div class="meter">
+        <div class="lbl"><span>提示詞完整度</span><b id="pct">0%</b></div>
+        <div class="track"><div class="fill" id="bar"></div></div>
+        <div class="hint" id="hint"></div>
+      </div>
+      <pre class="prompt" id="out" tabindex="0"></pre>
+      <div class="outfoot"><span class="count" id="count"></span><span class="toast" id="toast" role="status"></span></div>
+      <div class="tool" id="tool"></div>
+    </section>
+  </div>
+
+  <section class="tips" aria-label="使用小技巧">
+    <div class="tip"><b>目的寫結果，不寫動作</b>「讓總經理核准預算」比「做一份簡報」更能讓 AI 抓到重點。</div>
+    <div class="tip"><b>第一版不滿意就追問</b>直接回覆「第 3 頁太空泛，請加入數據」，比重新下提示詞更有效。</div>
+    <div class="tip"><b>保護公司資料</b>貼上背景資料前，先移除客戶姓名、電話、未公開財報等機密資訊。</div>
+  </section>
+</div>
+
+<script id="core">
+const KINDS={
+  deck:{label:'簡報',
+    tool:'先用 <b>ChatGPT、Claude 或 Gemini</b> 產出逐頁內容，再把結果貼到 <b>Gamma</b>（會依「---」自動分頁）、<b>Canva 簡報</b>或 <b>Copilot（PowerPoint）</b>生成投影片。',
+    out:['先用一句話寫出整份簡報的核心訊息（Key Message）。','接著逐頁輸出，頁與頁之間用單獨一行「---」分隔，每頁使用以下格式：','```','## 第 N 頁｜頁面標題（寫成一句結論）','- 重點內容：最多 3 點，每點 25 字以內','- 視覺建議：建議的圖表類型或圖片','- 講者備註：這一頁要口頭補充的內容（50–100 字）','```','最後附上「開場第一句話」與「結尾行動呼籲」。'],
+    avoid:['一頁超過 3 個重點，或出現大段文字','標題只寫主題（例如「市場分析」），沒有寫出結論','沒有數據、案例或依據支撐的主張'],
+    check:['只讀每頁標題，是否就能串成完整的故事線','每個主張是否都有數據、案例或依據','受眾看完是否清楚知道要做什麼決定'],
+    multi:'正式展開前，先提供 3 種不同的故事線方向（每種用 3–5 句說明主軸與適用情境）並標示你推薦哪一種，接著直接用推薦的方向完成整份簡報。'},
+  image:{label:'圖片',tool:'通用版可直接貼到 <b>ChatGPT、Gemini、Copilot Designer、Canva AI</b>；英文版貼到 <b>Midjourney</b>。AI 生成的中文字仍可能出錯，重要文字建議後製再加。'},
+  doc:{label:'文案',
+    tool:'適用 <b>ChatGPT、Claude、Gemini、Copilot</b>。長文建議用 Claude；需要最新資訊時，在 ChatGPT 或 Gemini 開啟搜尋功能。',
+    len:['依任務需要','精簡（約 300 字）','標準（約 800 字）','詳盡（1500 字以上）'],
+    out:['用 Markdown 小標（##）分段，段落簡短，重點用條列。','內容要能直接複製使用，不需要再改寫。','有多段內容或多組話術時，依實際使用順序排列，並加上小標。'],
+    avoid:['開頭客套，或重述我的需求','「在這個快速變化的時代」之類的陳腔濫調與空泛形容詞','沒有依據的誇大或保證性用語'],
+    check:['是否完全回應了目的與期望成果','目標受眾是否看得懂、用得上','每一項具體要求是否都有做到'],
+    multi:'提供 3 個不同切角的版本（例如理性、感性、故事型），每版開頭標示切角與適用情境，最後說明你推薦哪一版及原因。'},
+  email:{label:'訊息',
+    tool:'適用 <b>ChatGPT、Claude、Gemini、Copilot（Outlook）</b>。送出前請自己再讀一次，確認語氣符合你和對方的關係。',
+    len:['依任務需要','簡短（150 字內）','標準（300 字內）','完整（500 字內）'],
+    out:['依以下格式輸出：','```','主旨：（3 個選項；Email 才需要）','預覽文字：（30 字內；Email 才需要）','內文：','行動呼籲：（希望對方做什麼、在什麼時間之前）','```','若是 LINE 或群組訊息，省略主旨與預覽文字，改用短句分段，適合手機閱讀。'],
+    avoid:['冗長的客套或公文腔','一則訊息裡塞進多個行動要求','過多驚嘆號或表情符號'],
+    check:['收件者 5 秒內能看懂重點','只有一個清楚的行動呼籲','語氣符合雙方關係'],
+    multi:'提供 3 種不同語氣或切角的版本，每版開頭標示特色，最後說明你推薦哪一版。'},
+  data:{label:'分析',
+    tool:'把 Excel／CSV 檔直接上傳到 <b>ChatGPT、Claude 或 Gemini</b>，分析會比貼文字更準確；需要最新市場資訊時，請開啟搜尋功能。',
+    len:['依任務需要','精簡（重點摘要）','標準','詳盡（完整報告）'],
+    req:['如果我提供的數據不足，先列出你需要的數據欄位；需要示範時可以使用假設數據，但必須明確標示為「示範用假設」'],
+    out:['依以下結構輸出：','```','## 結論摘要（3 句話以內，先講結論）','## 分析框架（使用的方法與原因）','## 分析結果（以表格呈現）','## 關鍵洞察與建議（3–5 點，依重要性排序，每點附具體行動）','## 數據缺口與待確認事項','```'],
+    avoid:['只描述數字，沒有解讀與建議','把相關性當成因果關係','編造我沒有提供的數據或資料來源'],
+    check:['計算是否正確，數字前後是否一致','每一項建議是否都能對應到分析結果','假設與事實是否清楚區分'],
+    multi:'從 3 種不同的分析角度提出解讀，最後整合成一份建議。'},
+  video:{label:'影音',
+    tool:'用 <b>ChatGPT、Claude</b> 產出腳本；分鏡畫面可以再用 <b>Sora、Runway、Kling</b> 等影片工具生成，或交給拍攝團隊執行。',
+    out:['先提供影片標題與一句話的核心概念。','用表格呈現分鏡腳本，欄位為：時間｜畫面描述｜旁白／台詞｜字幕｜音效或音樂','最後附上 3–5 點拍攝與剪輯注意事項。'],
+    avoid:['開場鋪陳太久，前 3 秒沒有抓住注意力','字幕過長，或一個畫面塞進太多資訊','節奏與平台調性不符'],
+    check:['總長度是否符合設定的影片長度','前 3 秒是否有鉤子','結尾是否有明確的行動呼籲'],
+    multi:'先提供 3 種不同的開場與創意方向，再選一個推薦方向完成完整腳本。'}
+};
+const DEPTS=[
+ {id:'sales',name:'業務',aud:'總經理與業務主管',items:[
+  ['年度／季度業務策略簡報','deck','資深業務策略顧問，擅長以數據說故事、為高階主管製作決策型簡報','爭取總經理核准明年業務策略與預算','整理今年業績表現，提出明年三大策略主軸與行動計畫',[['目前業績與關鍵數據','今年營收 3.2 億、達成率 92%，新客成長 15%，但回購率下滑 5%'],['下一期目標','明年營收成長 12%、活躍經銷夥伴人數 +20%']],['依「現況診斷 → 機會與挑戰 → 策略主軸 → 行動計畫 → 所需資源與預算」鋪陳','每頁標題直接寫結論，一頁只講一個重點','每個策略都要對應可衡量的 KPI、負責單位與時程']],
+  ['客戶提案簡報','deck','頂尖 B2B 解決方案顧問，擅長把產品優勢轉譯成客戶的商業價值','讓客戶同意進入合作試行','向潛在客戶提案我們的方案，說明能如何解決他們的問題',[['客戶產業與痛點','連鎖藥妝通路，門市人力不足、會員回購率低'],['我方方案與優勢','會員經營系統＋教育訓練，導入 3 個月可見成效']],['先談客戶的痛點與損失，再談解決方案','用具體數字或案例證明成效（投資報酬、時間、成本）','最後一頁給出明確的下一步與合作時程']],
+  ['業績分析與檢討報告','data','業務營運分析師，擅長從銷售數據找出原因與改善方向','找出業績落差原因並提出改善對策','分析上季各區業績，比較目標與實際，找出問題',[['數據內容','各區月營收、達成率、客單價、新客數（可貼上表格或上傳檔案）'],['已知狀況','北區達成率 78%，主因兩位主力業務離職']],['先計算關鍵指標：達成率、成長率、貢獻占比','區分「可控因素」與「不可控因素」','對策要具體到誰、做什麼、何時完成']],
+  ['銷售話術腳本','doc','銷售訓練教練，熟悉顧問式銷售與 SPIN 提問法','讓新進業務能自信完成第一次產品介紹','撰寫一套從開場到成交的完整銷售話術',[['產品／服務','新上市抗老精華液，售價 1,680 元'],['銷售情境','門市面對面，首次接觸的上班族女性']],['依「開場破冰 → 需求探詢 → 產品介紹 → 處理疑慮 → 促成成交」分段','每段提供 2 種說法，並附上使用時機','提問要用開放式問句，避免硬推銷']],
+  ['客戶異議處理','doc','擁有 15 年經驗的銷售談判專家','準備好應對最常見的客戶拒絕理由','整理客戶最常提出的異議，並提供回應方式',[['產品／服務','企業團體保險方案'],['常見異議','太貴了、我再考慮、已經有別家了']],['每個異議先說明客戶背後真正的擔憂','回應採「認同 → 釐清 → 回應 → 確認」四步驟','附上一句應避免的地雷說法']],
+  ['開發信／陌生開發訊息','email','擅長 B2B 開發與冷郵件的業務開發專家','提高陌生客戶回覆率，約到 15 分鐘線上會議','寫一封給潛在客戶的開發信',[['收件對象','中型企業的人資主管'],['我方提供的價值','員工健康福利方案，有助降低離職率']],['開頭 2 句內點出對方可能的痛點','全文 150 字以內，手機好閱讀','結尾只放一個明確且低門檻的行動呼籲']],
+  ['客戶拜訪前準備','doc','資深大客戶經理，擅長拜訪前的情報整理與策略規劃','讓這次拜訪能推進到報價階段','幫我準備下週拜訪重要客戶的會談策略',[['客戶資訊','A 公司，年營收 50 億，去年與我們有小額合作'],['拜訪對象','採購經理與營運副總']],['列出客戶可能關心的 5 個議題','設計 8 個需求探詢問題','預想可能的反對意見並準備回應','定義本次拜訪的成功標準']],
+  ['會議紀錄與追蹤行動','doc','專業的會議記錄與專案管理助理','會議後每個人都清楚下一步','把會議逐字稿或筆記整理成正式會議紀錄',[['會議內容','（貼上會議筆記或逐字稿）'],['與會人員','業務處長、三位區經理、行銷窗口']],['摘要 5 個以內的重點結論','待辦事項以表格列出：事項｜負責人｜期限','另列「待決議事項」與「風險提醒」']],
+  ['競爭對手分析','data','市場競爭情報分析師','找出我們的差異化優勢與可切入的市場缺口','比較我們與主要競爭對手的產品、價格、通路與推廣策略',[['我方產品','中價位保養品，主打直銷與社群經營'],['主要競爭對手','品牌 A、品牌 B、品牌 C']],['用比較表呈現產品、價格、通路、推廣、目標客群','進行 SWOT 分析','提出 3 個可立即執行的競爭策略','標註哪些資訊需要再查證']],
+  ['報價與議價策略','doc','經驗豐富的商務談判顧問','守住毛利，同時拿下訂單','客戶要求降價 15%，幫我規劃報價與議價策略',[['報價內容','年度合約 120 萬，毛利率 35%'],['客戶狀況','正在與其他廠商比價，預算有限']],['設計三種報價方案（基本／標準／加值）','列出可讓步與不可讓步的項目','提供談判話術與底線建議']],
+  ['客戶分級與經營計畫','data','客戶關係管理（CRM）專家','把有限的業務資源集中在最有價值的客戶','依客戶貢獻度進行分級，並規劃各級客戶的經營方式',[['客戶資料','約 300 位客戶的年營收、購買頻率、最近交易日（可上傳檔案）'],['業務人力','5 位業務']],['使用 RFM 或 ABC 分級法，並說明分級標準','說明各級客戶的拜訪頻率、溝通方式與優惠策略','建議每位業務負責的客戶數']],
+  ['業務激勵競賽方案','doc','業務激勵與獎酬制度設計專家','衝刺第四季業績，提升團隊士氣','設計一個為期 2 個月的業務競賽活動',[['預算','獎金與獎品總預算 30 萬'],['參與對象','全台 200 位業務與經銷夥伴']],['設計個人賽與團體賽，兼顧新人與資深夥伴','獎勵門檻要可達成又有挑戰','附上活動時程、宣傳主軸與追蹤方式']],
+  ['業務週報／月報','doc','高效率的業務主管幕僚','讓主管 3 分鐘內掌握本月狀況','把本月業績數據與工作內容整理成月報',[['本月數據','營收 2,800 萬、達成率 105%、新客 42 位'],['重要事件','簽下兩家連鎖通路；一位區經理請長假']],['開頭用 3 句話摘要整體表現','依「成果 → 問題 → 下月計畫 → 需要的支援」排列','數字要附上與目標及去年同期的比較']],
+  ['LINE 群組公告與激勵訊息','email','擅長帶領業務團隊、溫暖又有力量的業務領導者','讓夥伴看完訊息願意立刻行動','寫一則給業務群組的活動公告與激勵訊息',[['公告內容','本月衝刺活動開跑，達標加碼獎金'],['團隊特性','以女性兼職夥伴為主，重視被肯定']],['手機閱讀友善，分段短句，可適度使用表情符號','先肯定夥伴的努力，再說明活動重點','結尾給出清楚的行動指令與截止時間','提供長版與短版各一則']],
+  ['新品業務說明會','deck','產品行銷經理兼業務培訓講師','讓業務在說明會後就能開口推薦新品','製作新品上市的業務說明會簡報',[['新品資訊','美白防曬乳，SPF50，售價 890 元'],['主要賣點','清爽不黏膩、通過敏感肌測試']],['包含產品亮點、目標客群、銷售話術、常見問答','提供一頁「30 秒電梯推薦」','加入業務獎勵與上市時程']],
+  ['客訴回覆','email','重視顧客體驗的客服與業務主管','化解客戶不滿，保住客戶關係','回覆一位因商品延遲到貨而很生氣的客戶',[['客訴內容','訂單延遲 10 天，客戶表示要取消並給負評'],['可提供的補償','免運費、9 折優惠券']],['先同理與道歉，不推卸責任','說明原因與具體處理方式','提供補償並確認客戶是否接受']],
+  ['業務目標拆解與行動計畫','data','業務營運規劃顧問，熟悉 OKR 與 KPI 管理','把年度目標拆成每月、每人可執行的行動','將年度業績目標拆解為各季、各區與個人目標',[['年度目標','全年營收 5 億'],['團隊結構','4 個區域，共 40 位業務']],['考量淡旺季與各區歷史貢獻比例','以表格呈現每季、每區、每人的目標','列出達成目標的關鍵行動（領先指標）']],
+  ['成交案例故事','doc','擅長商業故事寫作的內容策略師','讓潛在客戶看到真實成效並產生信任','把一個成功案例寫成可用於提案與社群的故事',[['案例內容','客戶導入我們的方案後，3 個月營收成長 30%'],['可公開資訊','客戶同意公開產業別，不公開公司名稱']],['採用「挑戰 → 解決方案 → 成果」結構','加入具體數據與客戶感言','另提供 100 字精簡版']],
+  ['事業夥伴招募文案','doc','直銷與經銷事業招募專家，熟悉台灣相關法規','吸引對副業有興趣的人報名說明會','撰寫招募事業夥伴的說明文案',[['招募對象','30–45 歲想增加收入的上班族與家庭主婦'],['事業優勢','時間彈性、完整培訓、產品口碑好']],['訴求真實，不誇大收入，不做保證獲利的承諾','用夥伴故事引發共鳴','清楚說明說明會時間與報名方式']],
+  ['業績表揚圖卡','image','專業平面設計師','在群組公開表揚業績冠軍，提升榮譽感','深藍色背景搭配金色光芒與彩帶，中央是獎盃與冠軍頭銜',[['表揚內容','10 月業績冠軍：王小美，達成率 180%'],['品牌色','深藍與金色']],['畫面要有榮譽感與慶祝感，但保持質感','預留人物照片、姓名與數字的位置','文字清楚易讀，適合手機觀看']]
+ ]},
+ {id:'mkt',name:'行銷',aud:'25–45 歲重視保養的女性',items:[
+  ['行銷活動企劃','doc','資深整合行銷企劃總監','提出一個能同時提升品牌聲量與銷售的活動企劃','規劃母親節檔期的整合行銷活動',[['產品／品牌','保養禮盒，主打送禮'],['預算與時程','預算 80 萬，活動期間 4/15–5/12']],['包含量化的活動目標、目標受眾、核心概念與主標語','規劃線上線下渠道與時程表','列出預算分配與 KPI 追蹤方式']],
+  ['專業設計感主視覺','image','國際級品牌視覺設計師兼商業攝影指導','做出有高級感、可用於官網與廣告的主視覺','玫瑰精華油瓶立在白色大理石台面上，周圍點綴玫瑰花瓣與細小水珠',[['產品／主題','玫瑰精華油，透明玻璃滴管瓶'],['品牌調性','優雅、自然、高級']],['產品是畫面焦點，周圍元素不可搶戲','預留標題文字區','整體達到雜誌廣告等級的質感']],
+  ['社群貼文文案','doc','經營過百萬追蹤帳號的社群小編','提高貼文互動率與留言數','撰寫 Facebook 與 Instagram 產品貼文',[['產品／主題','秋冬保濕面霜新品'],['平台','Instagram 與 Facebook']],['前兩行要能讓人停下來','加入互動提問，引導留言','附上 5–8 個相關 hashtag']],
+  ['IG 輪播圖文','doc','知識型 IG 圖文創作者兼視覺企劃','做出讓人想收藏與分享的輪播貼文','把主題規劃成 IG 輪播圖文',[['主題','換季肌膚保養的 5 個常見錯誤'],['頁數','8 頁']],['第 1 頁封面要有強烈的鉤子標題','每頁一個重點，文字精簡','最後一頁引導收藏、分享或私訊','每頁附上畫面設計建議']],
+  ['短影音腳本','video','短影音編導，熟悉 Reels、TikTok 與 Shorts 的演算法','做出完播率高、能帶動詢問的短影音','製作一支產品介紹短影音腳本',[['產品／主題','10 秒快速上妝的氣墊粉餅'],['拍攝條件','手機拍攝，一位素人出鏡']],['前 3 秒要有強烈鉤子','字幕簡短有力','結尾加入行動呼籲','另外提供 3 個開場鉤子備案']],
+  ['產品文案／商品頁','doc','電商轉換率優化文案專家','提升商品頁的轉換率','撰寫電商商品頁完整文案',[['產品資訊','膠原蛋白飲，每瓶 50ml，含 5000mg 膠原蛋白'],['目標客群','35–50 歲重視保養的女性']],['依 AIDA 架構撰寫','把產品規格轉換成顧客能感受到的好處','加入 FAQ 與購買理由','遵守化粧品與食品廣告法規，不做療效宣稱']],
+  ['EDM 電子報','email','Email 行銷專家','提高開信率與點擊率','撰寫一封會員專屬優惠電子報',[['活動內容','會員日全館 85 折，限時 3 天'],['會員輪廓','購買過 1 次以上的會員']],['提供 5 個主旨選項與預覽文字','內文分區塊，重點一眼可見','CTA 按鈕文字提供 3 種選擇']],
+  ['SEO 文章','doc','熟悉 Google E-E-A-T 原則的 SEO 內容策略師','讓文章排上搜尋第一頁，帶來自然流量','針對關鍵字撰寫一篇 SEO 文章',[['主要關鍵字','敏感肌保養'],['次要關鍵字','敏感肌推薦、敏感肌洗面乳']],['先提供標題、Meta 描述與文章大綱','H2／H3 結構清楚，自然置入關鍵字','內容展現專業與實際經驗，文末附 FAQ']],
+  ['廣告文案 A/B 測試','doc','數位廣告投放與文案優化專家','找出點擊率最高的廣告文案','撰寫 Facebook／Google 廣告的多組測試文案',[['產品／活動','新會員首購 5 折'],['廣告平台','Meta 廣告']],['提供 5 組不同訴求的文案：價格、痛點、社會認同、稀缺、情感','每組包含主標題、內文、CTA','說明每組的測試假設']],
+  ['產品情境攝影圖','image','頂尖商業產品攝影師','產出可用於電商與社群的高質感情境圖','香氛蠟燭放在木質茶几上，旁邊有咖啡杯與翻開的書，晨光從窗外灑進來',[['產品','白色陶瓷香氛蠟燭'],['使用情境','週末早晨的北歐風客廳']],['產品外觀真實、比例正確','情境自然、有生活感','光線柔和，有質感']],
+  ['新品上市計畫簡報','deck','產品行銷總監','讓跨部門對新品上市計畫達成共識','製作新品上市計畫簡報',[['新品資訊','男性保養系列，共 3 支單品'],['上市時間','明年 3 月']],['包含市場機會、目標客群、定位與 4P 策略','列出上市前、中、後的時程與分工','說明預算與 KPI']],
+  ['目標客群 Persona','data','消費者洞察研究員','清楚了解目標顧客，讓行銷溝通更精準','建立 3 個目標客群 Persona',[['產品／品牌','平價保健食品品牌'],['已知客群資料','以女性為主，25–45 歲，重視 CP 值']],['每個 Persona 包含背景、需求、痛點、購買動機、資訊管道','描述他們一天的生活場景','提出對每個 Persona 的溝通訊息']],
+  ['市場趨勢研究','data','產業研究分析師','掌握市場趨勢，作為明年規劃的依據','研究並整理產業的最新趨勢',[['研究產業','台灣保健食品市場'],['關注面向','消費趨勢、通路變化、競品動態']],['整理 5–7 個主要趨勢並附上依據','說明每個趨勢對我們是機會還是威脅','標示資料來源與年份，不確定的資訊要註明']],
+  ['新聞稿','doc','資深公關與媒體關係專家','讓媒體願意報導','撰寫新品上市新聞稿',[['新聞事件','品牌推出首款永續包裝系列'],['重要數據或引言','減少 40% 塑膠使用；總經理引言']],['依倒金字塔結構撰寫','標題有新聞性，副標補充重點','附上公司簡介與媒體聯絡窗口格式']],
+  ['KOL 合作企劃與邀約','email','網紅行銷經理','找到合適的 KOL 並成功邀約合作','規劃 KOL 合作並撰寫邀約訊息',[['合作目的','新品開箱與團購導購'],['預算','總預算 50 萬']],['建議 KOL 類型與分級（大型／中型／微網紅）','列出篩選標準與合作形式','撰寫一封專業又有誠意的邀約訊息']],
+  ['行銷成效分析報告','data','數位行銷數據分析師','看懂成效，找出下一步的優化方向','分析上個月行銷活動的成效',[['數據內容','曝光、點擊、CTR、轉換、ROAS（可貼上或上傳）'],['活動目標','ROAS 達到 4']],['先總結整體成效是否達標','依渠道比較表現，找出最佳與最差','提出 3–5 項具體優化建議']],
+  ['活動海報／DM','image','活動視覺設計師','讓人一眼看到活動重點並想參加','紅金色調的週年慶海報，中央是堆疊的禮盒與彩帶，上方留出大標題區',[['活動資訊','週年慶全館 8 折，11/1–11/10'],['使用場合','門市張貼與 LINE 官方帳號']],['主標題最醒目，資訊層次清楚','有節慶熱鬧感但不雜亂','預留 Logo 與 QR Code 位置']],
+  ['品牌故事與 Slogan','doc','品牌策略顧問兼資深文案','建立讓人記得、有共鳴的品牌形象','撰寫品牌故事並發想 Slogan',[['品牌背景','創立 30 年的女性保養品牌'],['品牌價值','自信、美麗、互助']],['品牌故事 300–500 字，有情感與畫面','提供 10 個 Slogan，標示各自的訴求方向','說明推薦的前 3 名與理由']],
+  ['內容行銷日曆','data','內容行銷經理','讓整個月的社群內容有計畫地產出','規劃下個月的社群內容日曆',[['平台與頻率','IG 每週 4 篇、FB 每週 3 篇'],['重要檔期','雙 11、會員日']],['以表格呈現：日期｜平台｜主題｜形式｜文案方向｜目標','內容比例兼顧教育、互動、銷售','標示重點檔期的預熱與收尾']],
+  ['直播銷售腳本','video','電商直播主持人兼直播企劃','提高直播觀看停留與下單數','規劃一場直播銷售的完整腳本',[['直播商品','5 款保養品與 1 組限定禮盒'],['直播優惠','限時 7 折、滿千送百']],['依時間段規劃流程與商品順序','設計留人、互動與催單話術','準備常見問題與突發狀況的應對']]
+ ]},
+ {id:'train',name:'訓練',aud:'入職一年內的業務同仁',items:[
+  ['課程大綱設計','doc','資深企業講師與教學設計師，熟悉 ADDIE 模型','設計一門能真正改變工作行為的課程','設計一門內訓課程的完整大綱',[['課程主題','顧問式銷售技巧'],['課程時數與對象','6 小時，入職一年內的業務']],['先定義 3–5 個可衡量的學習目標','每個單元包含時間、內容、教學方法與演練活動','講授與演練的比例約 3:7']],
+  ['教材簡報','deck','企業內訓講師兼簡報設計師','做出學員看得懂、記得住的教材簡報','把課程內容製作成上課用的教材簡報',[['課程主題','新人產品知識訓練'],['課程時數','2 小時']],['每頁文字精簡，用圖像與案例輔助','每 15–20 分鐘安排一頁互動或提問','最後安排重點回顧與行動承諾頁']],
+  ['講師逐字稿','doc','擅長口語表達的專業講師','讓講師能流暢、生動地上台授課','依簡報內容撰寫講師逐字稿',[['課程內容','（貼上簡報大綱或內容）'],['授課時長','50 分鐘']],['口語化，像真人在說話','標示停頓、提問、互動與轉場','加入開場故事與收尾金句']],
+  ['測驗題庫','doc','教育評量設計專家','檢驗學員是否真正理解課程重點','根據課程內容出一份測驗題庫',[['課程內容','（貼上教材或重點）'],['題型與題數','單選 15 題、情境題 5 題']],['題目對應學習目標，並區分難易度','附上正確答案與解析','情境題要貼近實際工作場景']],
+  ['角色扮演演練情境','doc','業務與管理職能訓練教練','讓學員在安全的環境中練習實戰技巧','設計課堂上的角色扮演演練',[['演練技能','處理客戶抱怨'],['分組方式','每組 3 人：客戶、業務、觀察員']],['提供 3 個難度遞增的情境劇本','分別寫出各角色的任務卡','附上觀察員評分表與回饋引導問題']],
+  ['新人入職訓練計畫','doc','人才發展與新人培育專家','讓新人 90 天內順利上手並留任','規劃新人前 90 天的入職訓練計畫',[['職務','門市業務專員'],['訓練資源','內部講師、線上課程、學長姐帶領']],['依第 1 週、第 1 個月、前 3 個月分段規劃','列出學習內容、負責人與檢核方式','加入定期面談與關懷機制']],
+  ['訓練需求分析','data','組織發展與訓練需求分析顧問','找出最值得投資的訓練主題','分析團隊的訓練需求並排出優先順序',[['現況資料','員工職能評估結果、主管訪談重點、績效數據'],['業務目標','明年客單價提升 10%']],['從組織、職務、個人三個層次分析','區分「訓練能解決」與「非訓練能解決」的問題','以表格排出訓練優先順序與建議形式']],
+  ['工作坊活動設計','doc','經驗豐富的引導師（Facilitator）','讓參與者在半天內產出具體共識與行動方案','設計一場半天的共識工作坊',[['工作坊主題','明年團隊目標共識'],['參與者','20 位主管，分成 4 組']],['設計開場、發散、收斂、行動四個階段','每個活動寫出目的、步驟、時間、所需物品','附上引導師的關鍵提問']],
+  ['SOP 作業手冊','doc','流程管理與標準作業程序撰寫專家','讓任何新人都能照著 SOP 正確完成工作','把一項工作流程整理成標準作業程序',[['作業流程','門市每日開店與結帳流程'],['常見錯誤','漏盤點、收銀差額']],['步驟編號清楚，每一步只有一個動作','標示注意事項、檢核點與常見錯誤','最後附上一頁快速檢核清單']],
+  ['訓練成效評估問卷','doc','熟悉 Kirkpatrick 四層次評估的訓練評估專家','了解課程成效並持續改善','設計課後成效評估問卷',[['課程名稱','主管領導力課程'],['評估重點','滿意度、學習成效、行為改變']],['依反應、學習、行為、成果四層次設計','混合量表題與開放題，總數 15 題以內','另附 3 個月後的追蹤問卷題目']],
+  ['教學影片腳本','video','企業數位學習影片編導','製作一支清楚易懂的教學影片','撰寫一支線上教學影片腳本',[['教學主題','如何使用新版下單系統'],['使用情境','新人自學，搭配操作畫面錄影']],['開場 15 秒說明學完能做到什麼','步驟化教學，搭配畫面操作說明','結尾做重點回顧與常見問題']],
+  ['個案研究教材','doc','商學院個案撰寫教授','讓學員透過真實情境練習分析與決策','撰寫一份課堂討論用的個案教材',[['個案主題','區域業績下滑時，業務主管該如何決策'],['學習重點','問題分析、團隊領導、資源分配']],['用故事敘事呈現背景、人物與兩難情境','不給答案，保留討論空間','附上 5 個討論問題與講師引導筆記']],
+  ['職能模型','data','人力資源職能模型專家','明確定義各職級需要的能力','建立業務職系的職能模型',[['職務範圍','業務專員、資深業務、區經理'],['公司核心價值','誠信、顧客導向、創新']],['區分核心職能、專業職能、管理職能','每項職能分 3–5 級行為指標','以表格呈現，可直接用於績效評核']],
+  ['課程招生宣傳文案','doc','教育課程行銷文案專家','讓目標學員主動報名','撰寫內訓課程的招生宣傳文案',[['課程資訊','AI 工具實戰工作坊，11/20 下午'],['目標學員','想提升工作效率的各部門同仁']],['開頭點出學員的痛點','條列學完的 3 個具體收穫','附上報名資訊與名額限制']],
+  ['年度學習地圖','data','企業大學學習發展規劃師','讓員工清楚知道每個階段該學什麼','規劃年度訓練計畫與學習地圖',[['對象','業務部門，從新人到主管'],['年度訓練預算','150 萬']],['依職級規劃必修與選修課程','以表格呈現課程、季度、形式、時數、預算','說明與公司策略的連結']],
+  ['教練式回饋對話','doc','國際認證企業教練（ICF）','進行一場讓部屬願意改變的回饋對話','準備一場與部屬的一對一回饋面談',[['部屬狀況','業績連續兩個月未達標，最近士氣低落'],['期望結果','一起找出原因並訂出改善計畫']],['使用 GROW 模型設計對話流程','提供開場說法與 10 個教練式提問','提醒應避免的說法']],
+  ['知識重點圖卡','image','資訊圖表（Infographic）設計師','把複雜知識變成一張看得懂的圖卡','由上到下排列的 5 步驟流程圖，每一步搭配一個簡單圖示與一句說明',[['知識內容','顧問式銷售 5 步驟'],['使用場合','課後發送到 LINE 群組']],['資訊層次清楚，一眼看懂流程','使用圖示輔助理解','文字少而精準']],
+  ['破冰與互動遊戲','doc','擅長活絡氣氛的培訓引導師','讓學員快速放鬆、彼此認識並投入課程','設計開場破冰與課中互動活動',[['課程情境','跨部門 30 人，彼此不熟'],['可用時間','破冰 15 分鐘']],['提供 3 個不同類型的活動','每個活動寫出步驟、時間、所需物品','說明如何把活動連結到課程主題']],
+  ['課後行動計畫','doc','學習轉移（Learning Transfer）專家','確保學員把課堂所學用在工作上','設計課後 30 天行動計畫與追蹤機制',[['課程主題','時間管理'],['追蹤方式','LINE 群組與主管面談']],['提供學員填寫的行動計畫範本','設計每週提醒訊息與小任務','規劃 30 天後的成果分享方式']],
+  ['課程主視覺／結業證書','image','教育品牌視覺設計師','讓課程更有質感與儀式感','直式結業證書，上方置中為標題區，四周是細緻的金色線條花紋邊框',[['設計內容','領導力培訓結業證書'],['品牌色','墨綠色與金色']],['莊重典雅，有儀式感','預留姓名、課程名稱、日期與簽名欄位','邊框與裝飾精緻但不繁複']]
+ ]}
+];
+
+const SEL={
+  tone:['專業正式','溫暖親切','激勵熱情','簡潔有力','數據理性','活潑有趣'],
+  lang:['繁體中文（台灣用語）','英文','中英對照'],
+  pages:['10 頁左右','5 頁以內（精簡版）','12–15 頁','20 頁以上（完整版）'],
+  frame:['依場景建議架構','金字塔原則：結論先行','SCQA：情境 → 衝突 → 問題 → 解答','現況 → 問題 → 策略 → 行動','故事型：起承轉合'],
+  vstyle:['極簡商務','數據圖表導向','溫暖品牌感','科技現代感'],
+  vlen:['30 秒','15 秒','60 秒','3–5 分鐘','60 分鐘（直播）'],
+  plat:['IG Reels','TikTok','YouTube Shorts','YouTube','LINE／內部學習平台','直播（FB／IG／蝦皮）'],
+  style:[['商業攝影寫實','commercial photography, photorealistic'],['高級雜誌廣告','high-end editorial magazine advertisement'],['極簡現代設計','minimalist modern graphic design'],['扁平向量插畫','flat vector illustration'],['3D 立體渲染','3D render, soft clay style'],['水彩手繪','watercolor hand-drawn illustration'],['科技未來感','futuristic tech aesthetic, sleek'],['日系清新','Japanese airy soft aesthetic'],['資訊圖表','clean infographic layout, simple icons']],
+  palette:[['由 AI 依主題搭配','harmonious color palette that fits the theme'],['莫蘭迪柔和色','muted Morandi palette'],['黑金奢華','black and gold luxury palette'],['清新白綠','fresh white and sage green'],['溫暖大地色','warm earth tones'],['高彩度活潑','vibrant bold colors'],['冷調藍灰','cool blue-grey tones']],
+  light:[['柔和自然光','soft natural light'],['攝影棚柔光','studio softbox lighting'],['戲劇性側光','dramatic side lighting'],['黃金時刻暖光','golden hour warm light'],['明亮高調','bright high-key lighting']],
+  comp:[['主體置中、大量留白','centered subject, generous negative space'],['三分法構圖','rule of thirds composition'],['俯拍平鋪','flat lay, top-down view'],['近距離特寫','close-up detail shot'],['廣角場景','wide establishing shot']],
+  ratio:[['1:1（IG 貼文）','1:1'],['4:5（IG 直式）','4:5'],['9:16（限動／短影音）','9:16'],['16:9（簡報／橫幅）','16:9'],['3:4（海報）','3:4'],['A4 直式（約 5:7）','5:7']]
+};
+const KCTL={
+  deck:[['pages','簡報頁數'],['frame','敘事框架'],['vstyle','視覺風格'],['tone','語氣'],['lang','輸出語言']],
+  image:[['style','視覺風格'],['palette','色調'],['light','光線'],['comp','構圖'],['ratio','畫面比例'],['imgText','畫面文字']],
+  video:[['vlen','影片長度'],['plat','發布平台'],['tone','語氣'],['lang','輸出語言']],
+  doc:[['tone','語氣'],['len','篇幅'],['lang','輸出語言']],
+  email:[['tone','語氣'],['len','篇幅'],['lang','輸出語言']],
+  data:[['tone','語氣'],['len','篇幅'],['lang','輸出語言']]
+};
+// 個別場景的預設設定（切換場景時套用）
+const DEF={
+  '業績表揚圖卡':{style:'極簡現代設計',ratio:'4:5（IG 直式）',light:'明亮高調'},
+  '專業設計感主視覺':{style:'高級雜誌廣告',light:'攝影棚柔光',ratio:'16:9（簡報／橫幅）'},
+  '產品情境攝影圖':{style:'商業攝影寫實',light:'柔和自然光',ratio:'4:5（IG 直式）',comp:'三分法構圖'},
+  '活動海報／DM':{style:'極簡現代設計',palette:'高彩度活潑',ratio:'3:4（海報）',light:'明亮高調'},
+  '知識重點圖卡':{style:'資訊圖表',ratio:'4:5（IG 直式）',light:'明亮高調'},
+  '課程主視覺／結業證書':{style:'極簡現代設計',ratio:'A4 直式（約 5:7）',light:'明亮高調'},
+  '直播銷售腳本':{vlen:'60 分鐘（直播）',plat:'直播（FB／IG／蝦皮）',tone:'活潑有趣'},
+  '教學影片腳本':{vlen:'3–5 分鐘',plat:'LINE／內部學習平台',tone:'溫暖親切'},
+  '短影音腳本':{tone:'活潑有趣'},
+  'LINE 群組公告與激勵訊息':{tone:'激勵熱情'},
+  '客訴回覆':{tone:'溫暖親切'},
+  '業績分析與檢討報告':{tone:'數據理性'},'行銷成效分析報告':{tone:'數據理性'},'競爭對手分析':{tone:'數據理性'}
+};
+const AUD_EX={sales:'總經理與業務主管',mkt:'25–45 歲重視保養的女性',train:'入職一年內的業務同仁'};
+const optsFor=(kind,key)=>key==='len'?KINDS[kind].len:SEL[key];
+const enOf=(key,val)=>{const o=(SEL[key]||[]).find(a=>a[0]===val);return o?o[1]:''};
+const isPaste=s=>s.startsWith('（');
+
+/* 純函式：輸入場景與使用者填寫內容，回傳提示詞文字 */
+function genPrompt(x,dept,V){
+  const kind=x[1],K=KINDS[kind],T=s=>`【請補充：${s}】`;
+  const fv=x[5].map((f,i)=>[f[0],(V.f[i]||'').trim()]).filter(a=>a[1]);
+  const L=[];
+  const dataBlock=()=>{if(V.bg)L.push('以下 <背景資料> 標籤內是我提供的參考內容，請優先以此為依據：','<背景資料>',V.bg,'</背景資料>')};
+
+  if(kind==='image'){
+    const brand=fv.find(a=>a[0].includes('品牌色'));
+    const other=fv.filter(a=>a!==brand);
+    const pal=V.k.palette, palAuto=pal===SEL.palette[0][0];
+    const color=brand?`以品牌色「${brand[1]}」為主色${palAuto?'':`，整體呈現${pal}的氛圍`}`:(palAuto?'依主題搭配和諧的色彩':pal);
+    const ar=(SEL.ratio.find(a=>a[0]===V.k.ratio)||['','1:1'])[1];
+    const txt=(V.imgText||'').trim();
+    L.push('【通用版】ChatGPT／Gemini／Copilot Designer／Canva AI','');
+    L.push(`請你以${x[2]}的專業水準，生成一張圖片。`,'');
+    L.push('# 畫面描述',`一張 ${ar} 比例、${V.k.style}風格的圖片，用途是「${x[0]}」，目的是${V.goal||T('想達成的目的')}。畫面主體是${V.desc||T('畫面主體')}。採用${V.k.comp}，${V.k.light}，色調${color}。`);
+    other.forEach(a=>L.push(`- ${a[0]}：${a[1]}`));
+    if(V.company)L.push(`- 品牌／公司：${V.company}`);
+    if(V.aud)L.push(`- 觀看對象：${V.aud}`);
+    L.push('');
+    L.push('# 視覺規格',`- 風格：${V.k.style}`,`- 色調：${color}`,`- 光線：${V.k.light}`,`- 構圖：${V.k.comp}`,`- 畫面比例：${V.k.ratio}`,'');
+    L.push('# 畫面文字',txt?`畫面中只放入這段文字：「${txt}」。使用繁體中文，字體清晰、筆畫正確、沒有錯字，字體風格與畫面一致。`:'畫面中不要出現任何文字或字母，保留乾淨的版面，方便我後製加字。','');
+    L.push('# 設計要求',...x[6].map(s=>'- '+s),'- 專業商業質感、高解析度、細節清晰','- 主體明確、構圖平衡、留白適當','');
+    if(V.bg){L.push('# 參考資料');dataBlock();L.push('')}
+    L.push('# 請避免','低解析度、模糊、變形的手或臉、比例錯誤、雜亂背景、浮水印、亂碼或錯字、過度飽和、廉價的素材圖感','');
+    L.push('# 進行方式');
+    if(V.ask)L.push('生成前，先用 3 個問題確認我的需求（附上你建議的預設答案），等我回答後再生成。');
+    if(V.multi)L.push('請依序生成 4 種不同構圖的版本；如果一次只能生成一張，先生成第 1 種，並用文字列出其餘 3 種構圖讓我選擇。');
+    L.push('之後我若要求修改，請保留其他設定，只調整我指定的部分。','');
+    L.push('────────────','【Midjourney 英文版】','（中括號內的中文請先翻成英文再貼上；也可以把上方通用版貼給 ChatGPT，請它改寫成英文 Midjourney 提示詞）');
+    if(txt)L.push('（Midjourney 對中文字支援有限，畫面文字建議後製加入）');
+    L.push('');
+    const subj=[V.desc||'畫面主體',...other.map(a=>a[1])].join('，');
+    const colorEn=brand?`[品牌色：${brand[1]}] color scheme`:enOf('palette',pal);
+    L.push(`[${subj}], ${enOf('style',V.k.style)}, ${enOf('comp',V.k.comp)}, ${enOf('light',V.k.light)}, ${colorEn}, premium commercial quality, highly detailed, sharp focus${txt?`, with the text "${txt}"`:''} --ar ${ar} --v 7 --no ${txt?'watermark, blurry, distorted':'text, letters, watermark, logo, blurry, distorted'}`);
+    return L.join('\n');
+  }
+
+  const en=V.k.lang==='英文', bi=V.k.lang==='中英對照';
+  L.push('# 角色',`你是一位${x[2]}。請以這個專業身分的最高標準完成任務。`,'');
+  L.push('# 任務與目的',`- 任務：${x[0]}。${V.desc||T('任務內容')}`,`- 目的：${V.goal||T('想達成的目的或結果')}`,`- 目標受眾：${V.aud||T('誰會看到或使用這份產出')}`,'');
+  L.push('# 背景資訊');
+  if(V.company)L.push(`- 公司／產業：${V.company}`);
+  L.push(`- 我的部門：${dept.name}`,...fv.map(a=>`- ${a[0]}：${a[1]}`));
+  x[5].forEach((f,i)=>{if(!(V.f[i]||'').trim()&&isPaste(f[1])&&!V.bg)L.push(`- ${f[0]}：${T(f[1].replace(/[（）]/g,''))}`)});
+  dataBlock();
+  L.push('');
+  const req=[...x[6]];
+  if(kind==='deck'){req.push(`簡報頁數：${V.k.pages}`);if(V.k.frame!==SEL.frame[0])req.push(`敘事框架：${V.k.frame}（以此框架為主，調整上述鋪陳順序）`);req.push(`視覺風格：${V.k.vstyle}`)}
+  if(kind==='video')req.push(`影片長度：${V.k.vlen}`,`發布平台：${V.k.plat}，節奏與規格要符合平台特性`);
+  if(K.req)req.push(...K.req);
+  req.push(`語氣：${V.k.tone}`);
+  if(K.len&&V.k.len&&V.k.len!==K.len[0])req.push(`篇幅：${V.k.len}`);
+  req.push(`輸出語言：${V.k.lang}${bi?'（每段先寫中文，再附英文）':''}`);
+  L.push('# 具體要求',...req.map((s,i)=>`${i+1}. ${s}`),'');
+  L.push('# 輸出格式',...K.out);
+  if(V.multi)L.push('',`多版本：${K.multi}`);
+  L.push('');
+  L.push('# 請避免',...K.avoid.map(s=>'- '+s),'');
+  const qs=['內容具體、可直接使用，有數字或例子支撐',en?'英文要自然、專業，符合國際商務寫作習慣':'使用繁體中文與台灣慣用的職場用語'];
+  if(V.tbd)qs.push('無法確認的數據或事實，標示【待確認】並說明假設，絕不捏造');
+  L.push('# 品質標準',...qs.map(s=>'- '+s));
+  if(V.crit)L.push('','交付前，請依以下清單自我檢查並修正，只輸出修正後的最終版本，不必列出檢查過程：',...[...K.check,'是否符合所有具體要求與輸出格式'].map(s=>'- '+s));
+  L.push('','# 進行方式');
+  if(V.ask)L.push('開始前，先一次列出 3–5 個你最需要釐清的問題，並附上你建議的預設答案；等我回答後再開始產出。');
+  else L.push('請直接開始產出。'+(V.tbd?'資訊不足的地方，依最合理的假設完成並標示【待確認】。':''));
+  L.push('產出最後，用一句話告訴我：如果再補充哪些資訊，下一版可以更好。');
+  return L.join('\n');
+}
+</script>
+
+<script>
+const $=id=>document.getElementById(id);
+let cur={d:0,i:0}, q='';
+const it=()=>DEPTS[cur.d].items[cur.i];
+const kindVals={};
+const LS='prompt-studio-company';
+
+function renderTabs(){
+  $('tabs').innerHTML=DEPTS.map((d,k)=>`<button class="tab" role="tab" data-d="${d.id}" aria-selected="${!q&&k===cur.d}" data-k="${k}"><span class="dot"></span>${d.name}<small>${d.items.length}</small></button>`).join('');
+}
+function renderGrid(){
+  let list=[];
+  if(q){DEPTS.forEach((d,dk)=>d.items.forEach((x,ik)=>{if((x[0]+x[3]+x[4]+KINDS[x[1]].label).includes(q))list.push([dk,ik])}))}
+  else DEPTS[cur.d].items.forEach((x,ik)=>list.push([cur.d,ik]));
+  $('grid').innerHTML=list.length?list.map(([dk,ik])=>{const x=DEPTS[dk].items[ik];const on=dk===cur.d&&ik===cur.i;
+    return `<button class="sc" type="button" aria-pressed="${on}" data-dk="${dk}" data-ik="${ik}"><span class="n">${String(ik+1).padStart(2,'0')}</span><span class="t">${x[0]}${q?`<br><span class="dl">${DEPTS[dk].name}</span>`:''}</span><span class="k ${x[1]}">${KINDS[x[1]].label}</span></button>`}).join('')
+    :'<div class="empty">找不到相符的場景，試試「簡報」「圖片」「文案」等關鍵字。</div>';
+}
+function opt(list,val){return list.map(o=>{const v=Array.isArray(o)?o[0]:o;return `<option${v===val?' selected':''}>${v}</option>`}).join('')}
+function renderForm(clear){
+  const x=it(), d=DEPTS[cur.d], def=DEF[x[0]]||{};
+  document.body.dataset.dept=d.id;
+  $('sTitle').textContent=`${d.name}｜${x[0]}`;
+  $('sRole').textContent=`AI 角色設定：${x[2]}`;
+  $('goal').placeholder='例：'+x[3];
+  document.querySelector('label[for=desc]').innerHTML=(x[1]==='image'?'畫面主體與場景':'任務簡述')+'<em>必填</em>';
+  $('desc').placeholder='例：'+x[4];
+  $('aud').placeholder='例：'+AUD_EX[d.id];
+  $('dyn').innerHTML=x[5].map((f,k)=>`<div class="field"><label for="f${k}">${f[0]}</label><input id="f${k}" placeholder="${isPaste(f[1])?f[1]:'例：'+f[1]}"></div>`).join('');
+  $('kindCtl').innerHTML=KCTL[x[1]].map(([k,l])=>k==='imgText'
+    ?`<div class="field"><label for="imgText">${l}<i>選填</i></label><input id="imgText" placeholder="留白＝不放文字"></div>`
+    :`<div class="field"><label for="k_${k}">${l}</label><select id="k_${k}">${opt(optsFor(x[1],k),def[k]||kindVals[k])}</select></div>`).join('');
+  $('oMulti').parentNode.lastChild.textContent=x[1]==='image'?'提供 4 種不同構圖讓我挑選':'提供多個方向讓我挑選';
+  if(clear)['goal','desc','aud','bg'].forEach(id=>$(id).value='');
+  build();
+}
+function fillExample(){
+  const x=it();
+  $('goal').value=x[3];$('desc').value=x[4];$('aud').value=AUD_EX[DEPTS[cur.d].id];
+  x[5].forEach((f,k)=>{$('f'+k).value=isPaste(f[1])?'':f[1]});
+  build();
+}
+const val=id=>{const e=$(id);return e?e.value.trim():''};
+function collect(){
+  const x=it(), k={};
+  KCTL[x[1]].forEach(([key])=>{if(key!=='imgText'){k[key]=val('k_'+key);kindVals[key]=k[key]}});
+  return {goal:val('goal'),desc:val('desc'),aud:val('aud'),bg:val('bg'),company:val('company'),
+    f:x[5].map((_,i)=>val('f'+i)),k,imgText:val('imgText'),
+    ask:$('oAsk').checked,multi:$('oMulti').checked,crit:$('oCrit').checked,tbd:$('oTbd').checked};
+}
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function build(){
+  const x=it(), V=collect(), text=genPrompt(x,DEPTS[cur.d],V);
+  $('out').innerHTML=text.split('\n').map(line=>{
+    const e=esc(line).replace(/【請補充：[^】]*】/g,m=>`<span class="todo">${m}</span>`);
+    if(line.startsWith('# '))return `<span class="h">${e}</span>`;
+    if(line.startsWith('【'))return `<span class="sec">${e}</span>`;
+    if(/^(────|（中括號|（Midjourney|```)/.test(line))return `<span class="mute">${e}</span>`;
+    if(/^<\/?背景資料>$/.test(line))return `<span class="tag">${e}</span>`;
+    return e}).join('\n');
+  $('out').dataset.raw=text;
+  $('count').textContent=`${text.length.toLocaleString()} 字`;
+  $('tool').innerHTML='建議工具：'+KINDS[x[1]].tool;
+  const parts=[['目的',V.goal,22],[x[1]==='image'?'畫面主體與場景':'任務簡述',V.desc,22],['目標受眾',V.aud,14],['公司／品牌與產業',V.company,10],[x[5][0][0],V.f[0],11],[x[5][1][0],V.f[1],11],['背景資料',V.bg,10]];
+  const score=parts.reduce((s,p)=>s+(p[1]?p[2]:0),0);
+  $('pct').textContent=score+'%';$('bar').style.width=score+'%';
+  const miss=parts.find(p=>!p[1]);
+  $('hint').className='hint'+(miss?'':' good');
+  $('hint').textContent=miss?`補上「${miss[0]}」，AI 的產出會更精準。`:'資訊很完整，可以直接複製使用。';
+}
+
+try{$('company').value=localStorage.getItem(LS)||''}catch(e){}
+$('company').addEventListener('input',e=>{try{localStorage.setItem(LS,e.target.value)}catch(err){}});
+$('tabs').addEventListener('click',e=>{const b=e.target.closest('.tab');if(!b)return;q='';$('q').value='';cur={d:+b.dataset.k,i:0};renderTabs();renderGrid();renderForm(true)});
+$('grid').addEventListener('click',e=>{const b=e.target.closest('.sc');if(!b)return;cur={d:+b.dataset.dk,i:+b.dataset.ik};renderTabs();renderGrid();renderForm(true);
+  if(window.innerWidth<900)$('sTitle').scrollIntoView({behavior:'smooth',block:'start'})});
+$('q').addEventListener('input',e=>{q=e.target.value.trim();renderTabs();renderGrid()});
+document.querySelector('.work').addEventListener('input',build);
+document.querySelector('.work').addEventListener('change',build);
+$('exBtn').addEventListener('click',fillExample);
+$('clrBtn').addEventListener('click',()=>{document.querySelectorAll('.work input:not([type=checkbox]):not([data-keep]),.work textarea').forEach(el=>el.value='');build()});
+$('copyBtn').addEventListener('click',()=>{
+  const t=$('out').dataset.raw, n=(t.match(/【請補充/g)||[]).length, toast=$('toast');
+  const done=()=>{toast.className='toast'+(n?' warn':'');toast.textContent=n?`已複製。還有 ${n} 處【請補充】，建議先填寫再使用`:'已複製，貼到 AI 工具即可使用';setTimeout(()=>{toast.textContent=''},3200)};
+  const fallback=()=>{const r=document.createRange();r.selectNodeContents($('out'));const s=getSelection();s.removeAllRanges();s.addRange(r);toast.className='toast';toast.textContent='已選取全文，請按 Ctrl+C／⌘C 複製'};
+  try{navigator.clipboard.writeText(t).then(done,fallback)}catch(err){fallback()}
+});
+
+renderTabs();renderGrid();renderForm(true);fillExample();
+</script>
+</body>
+</html>
