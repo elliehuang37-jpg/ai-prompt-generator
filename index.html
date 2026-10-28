@@ -175,8 +175,8 @@ pre.prompt .tag{color:#9fb7c9}
 
       <div class="step">
         <h3><span>1</span>你想要的結果</h3>
-        <div class="field"><label for="goal">目的／期望成果<em>必填</em></label><input id="goal"></div>
-        <div class="field"><label for="desc">任務簡述<em>必填</em></label><textarea id="desc" rows="2"></textarea></div>
+        <div class="field"><label for="goal">完成後，你希望發生什麼事<em>必填</em></label><input id="goal"></div>
+        <div class="field"><label for="desc">要交付的東西<em>必填</em></label><textarea id="desc" rows="2"></textarea></div>
       </div>
 
       <div class="step">
@@ -191,9 +191,12 @@ pre.prompt .tag{color:#9fb7c9}
         <h3><span>3</span>輸出設定</h3>
         <div id="kindCtl" class="row"></div>
         <div class="opts" id="opts">
+          <label><input type="checkbox" id="oDeep" checked>深度模式：先想清楚頂尖專業者會怎麼做</label>
+          <label><input type="checkbox" id="oUp" checked>有更好的做法時，讓 AI 先提出來</label>
+          <label><input type="checkbox" id="oChal">挑戰我的假設</label>
+          <label><input type="checkbox" id="oCrit" checked>虛擬審稿：找出最可能出錯的 3 處並修正</label>
           <label><input type="checkbox" id="oAsk">開始前先問我關鍵問題，再產出</label>
           <label><input type="checkbox" id="oMulti">提供多個版本讓我挑選</label>
-          <label><input type="checkbox" id="oCrit" checked>交付前自我檢查並修正</label>
           <label><input type="checkbox" id="oTbd" checked>資訊不足時標示【待確認】，不可捏造</label>
         </div>
       </div>
@@ -219,7 +222,8 @@ pre.prompt .tag{color:#9fb7c9}
   </div>
 
   <section class="tips" aria-label="使用小技巧">
-    <div class="tip"><b>目的寫結果，不寫動作</b>「讓總經理核准預算」比「做一份簡報」更能讓 AI 抓到重點。</div>
+    <div class="tip"><b>講結果，不只講步驟</b>「讓忙碌的主管在 30 分鐘內看懂並做決定」比「做一份簡報」更能讓 AI 找到好方法。</div>
+    <div class="tip"><b>要方法，不要角色</b>與其叫 AI「扮演專家」，不如要它用專家的方法、資料與驗證方式來做。</div>
     <div class="tip"><b>第一版不滿意就追問</b>直接回覆「第 3 頁太空泛，請加入數據」，比重新下提示詞更有效。</div>
     <div class="tip"><b>保護公司資料</b>貼上背景資料前，先移除客戶姓名、電話、未公開財報等機密資訊。</div>
   </section>
@@ -232,7 +236,9 @@ const KINDS={
     out:['先用一句話寫出整份簡報的核心訊息（Key Message）。','接著逐頁輸出，頁與頁之間用單獨一行「---」分隔，每頁使用以下格式：','```','## 第 N 頁｜頁面標題（寫成一句結論）','- 重點內容：最多 3 點，每點 25 字以內','- 視覺建議：建議的圖表類型或圖片','- 講者備註：這一頁要口頭補充的內容（50–100 字）','```','最後附上「開場第一句話」與「結尾行動呼籲」。'],
     avoid:['一頁超過 3 個重點，或出現大段文字','標題只寫主題（例如「市場分析」），沒有寫出結論','沒有數據、案例或依據支撐的主張'],
     check:['只讀每頁標題，是否就能串成完整的故事線','每個主張是否都有數據、案例或依據','受眾看完是否清楚知道要做什麼決定'],
-    multi:'正式展開前，先提供 3 種不同的故事線方向（每種用 3–5 句說明主軸與適用情境）並標示你推薦哪一種，接著直接用推薦的方向完成整份簡報。'},
+    multi:'正式展開前，先提供 3 種不同的故事線方向（每種用 3–5 句說明主軸與適用情境）並標示你推薦哪一種，接著直接用推薦的方向完成整份簡報。',
+    borrow:'說故事的人怎麼鋪陳衝突與轉折、決策分析怎麼呈現選項與取捨',
+    verify:['請一位目標受眾只看每頁標題，能否在 1 分鐘內說出結論','會議結束時，是否做出了這份簡報想促成的決定']},
   image:{label:'圖片',tool:'通用版可直接貼到 <b>ChatGPT、Gemini、Copilot Designer、Canva AI</b>；英文版貼到 <b>Midjourney</b>。AI 生成的中文字仍可能出錯，重要文字建議後製再加。'},
   doc:{label:'文案',
     tool:'適用 <b>ChatGPT、Claude、Gemini、Copilot</b>。長文建議用 Claude；需要最新資訊時，在 ChatGPT 或 Gemini 開啟搜尋功能。',
@@ -240,14 +246,18 @@ const KINDS={
     out:['用 Markdown 小標（##）分段，段落簡短，重點用條列。','內容要能直接複製使用，不需要再改寫。','有多段內容或多組話術時，依實際使用順序排列，並加上小標。'],
     avoid:['開頭客套，或重述我的需求','「在這個快速變化的時代」之類的陳腔濫調與空泛形容詞','沒有依據的誇大或保證性用語'],
     check:['是否完全回應了目的與期望成果','目標受眾是否看得懂、用得上','每一項具體要求是否都有做到'],
-    multi:'提供 3 個不同切角的版本（例如理性、感性、故事型），每版開頭標示切角與適用情境，最後說明你推薦哪一版及原因。'},
+    multi:'提供 3 個不同切角的版本（例如理性、感性、故事型），每版開頭標示切角與適用情境，最後說明你推薦哪一版及原因。',
+    borrow:'雜誌編輯的刪減原則（每一句都要有存在的理由）、直效行銷「一位讀者、一個行動」的寫法',
+    verify:['請 2–3 位目標受眾試讀，看他們能否說出重點與下一步','實際使用後的回應率、轉換率或執行率']},
   email:{label:'訊息',
     tool:'適用 <b>ChatGPT、Claude、Gemini、Copilot（Outlook）</b>。送出前請自己再讀一次，確認語氣符合你和對方的關係。',
     len:['依任務需要','簡短（150 字內）','標準（300 字內）','完整（500 字內）'],
     out:['依以下格式輸出：','```','主旨：（3 個選項；Email 才需要）','預覽文字：（30 字內；Email 才需要）','內文：','行動呼籲：（希望對方做什麼、在什麼時間之前）','```','若是 LINE 或群組訊息，省略主旨與預覽文字，改用短句分段，適合手機閱讀。'],
     avoid:['冗長的客套或公文腔','一則訊息裡塞進多個行動要求','過多驚嘆號或表情符號'],
     check:['收件者 5 秒內能看懂重點','只有一個清楚的行動呼籲','語氣符合雙方關係'],
-    multi:'提供 3 種不同語氣或切角的版本，每版開頭標示特色，最後說明你推薦哪一版。'},
+    multi:'提供 3 種不同語氣或切角的版本，每版開頭標示特色，最後說明你推薦哪一版。',
+    borrow:'直效行銷文案的測試思維、業務開發「給對方低門檻下一步」的做法',
+    verify:['開信率、回覆率或已讀後的行動率（可以做 A/B 測試比較版本）','對方是否在期限內完成你要的行動']},
   data:{label:'分析',
     tool:'把 Excel／CSV 檔直接上傳到 <b>ChatGPT、Claude 或 Gemini</b>，分析會比貼文字更準確；需要最新市場資訊時，請開啟搜尋功能。',
     len:['依任務需要','精簡（重點摘要）','標準','詳盡（完整報告）'],
@@ -255,13 +265,17 @@ const KINDS={
     out:['依以下結構輸出：','```','## 結論摘要（3 句話以內，先講結論）','## 分析框架（使用的方法與原因）','## 分析結果（以表格呈現）','## 關鍵洞察與建議（3–5 點，依重要性排序，每點附具體行動）','## 數據缺口與待確認事項','```'],
     avoid:['只描述數字，沒有解讀與建議','把相關性當成因果關係','編造我沒有提供的數據或資料來源'],
     check:['計算是否正確，數字前後是否一致','每一項建議是否都能對應到分析結果','假設與事實是否清楚區分'],
-    multi:'從 3 種不同的分析角度提出解讀，最後整合成一份建議。'},
+    multi:'從 3 種不同的分析角度提出解讀，最後整合成一份建議。',
+    borrow:'調查記者從原始資料出發、交叉比對的查證方式，以及放空研究員專找弱點與漏洞的分析方式',
+    verify:['用原始數據重新計算，核對報告中的每一個關鍵數字','建議執行後要追蹤的領先指標，以及檢查的時間點']},
   video:{label:'影音',
     tool:'用 <b>ChatGPT、Claude</b> 產出腳本；分鏡畫面可以再用 <b>Sora、Runway、Kling</b> 等影片工具生成，或交給拍攝團隊執行。',
     out:['先提供影片標題與一句話的核心概念。','用表格呈現分鏡腳本，欄位為：時間｜畫面描述｜旁白／台詞｜字幕｜音效或音樂','最後附上 3–5 點拍攝與剪輯注意事項。'],
     avoid:['開場鋪陳太久，前 3 秒沒有抓住注意力','字幕過長，或一個畫面塞進太多資訊','節奏與平台調性不符'],
     check:['總長度是否符合設定的影片長度','前 3 秒是否有鉤子','結尾是否有明確的行動呼籲'],
-    multi:'先提供 3 種不同的開場與創意方向，再選一個推薦方向完成完整腳本。'}
+    multi:'先提供 3 種不同的開場與創意方向，再選一個推薦方向完成完整腳本。',
+    borrow:'電影剪輯的節奏與鉤子設計、脫口秀的鋪陳與停頓',
+    verify:['前 3 秒留存率與完播率','留言、私訊詢問或下單數']}
 };
 const DEPTS=[
  {id:'sales',name:'業務',aud:'總經理與業務主管',items:[
@@ -389,7 +403,7 @@ function genPrompt(x,dept,V){
     const ar=(SEL.ratio.find(a=>a[0]===V.k.ratio)||['','1:1'])[1];
     const txt=(V.imgText||'').trim();
     L.push('【通用版】ChatGPT／Gemini／Copilot Designer／Canva AI','');
-    L.push(`請你以${x[2]}的專業水準，生成一張圖片。`,'');
+    L.push(`請用${x[2]}實際的工作方法生成一張圖片：先決定觀看者在 1 秒內要感受到什麼，再安排主體、構圖與光線，讓畫面只有一個視覺焦點。`,'');
     L.push('# 畫面描述',`一張 ${ar} 比例、${V.k.style}風格的圖片，用途是「${x[0]}」，目的是${V.goal||T('想達成的目的')}。畫面主體是${V.desc||T('畫面主體')}。採用${V.k.comp}，${V.k.light}，色調${color}。`);
     other.forEach(a=>L.push(`- ${a[0]}：${a[1]}`));
     if(V.company)L.push(`- 品牌／公司：${V.company}`);
@@ -401,6 +415,7 @@ function genPrompt(x,dept,V){
     if(V.bg){L.push('# 參考資料');dataBlock();L.push('')}
     L.push('# 請避免','低解析度、模糊、變形的手或臉、比例錯誤、雜亂背景、浮水印、亂碼或錯字、過度飽和、廉價的素材圖感','');
     L.push('# 進行方式');
+    if(V.crit)L.push('生成後，把圖縮小到手機螢幕的大小看 1 秒：重點是否仍然清楚、文字是否讀得出來？若不清楚，直接調整後再交給我。');
     if(V.ask)L.push('生成前，先用 3 個問題確認我的需求（附上你建議的預設答案），等我回答後再生成。');
     if(V.multi)L.push('請依序生成 4 種不同構圖的版本；如果一次只能生成一張，先生成第 1 種，並用文字列出其餘 3 種構圖讓我選擇。');
     L.push('之後我若要求修改，請保留其他設定，只調整我指定的部分。','');
@@ -414,8 +429,15 @@ function genPrompt(x,dept,V){
   }
 
   const en=V.k.lang==='英文', bi=V.k.lang==='中英對照';
-  L.push('# 角色',`你是一位${x[2]}。請以這個專業身分的最高標準完成任務。`,'');
-  L.push('# 任務與目的',`- 任務：${x[0]}。${V.desc||T('任務內容')}`,`- 目的：${V.goal||T('想達成的目的或結果')}`,`- 目標受眾：${V.aud||T('誰會看到或使用這份產出')}`,'');
+  // 高度：先講最終想發生的結果，再講這次要交付的東西
+  L.push('# 我真正要的結果',`- 完成後，我希望接下來發生的事：${V.goal||T('產出之後，你希望發生什麼事')}`,`- 這次要交付的東西：${x[0]}。${V.desc||T('任務內容')}`,`- 給誰看／給誰用：${V.aud||T('誰會看到或使用這份產出')}`);
+  if(V.up)L.push('- 交付的形式只是手段。如果你判斷有比這個形式更能達成上述結果的做法，請在最前面用 2–3 句提出來，然後仍依我指定的形式完成。');
+  L.push('');
+  // 深度＋廣度：用專家的方法，而不是扮演專家
+  L.push('# 做法',`- 品質要達到「${x[2]}」會交出的水準。請用這類頂尖專業者實際使用的方法、工具與資料來源來完成，而不只是模仿他們的口吻。`,`- 也可以借用其他領域的做法，例如${K.borrow}。`);
+  if(V.deep)L.push('- 動手前先想清楚以下 4 件事，並在產出最前面用 3–5 行簡短說明你採用的做法：','  1. 這個領域最頂尖的人，會多做哪些我沒要求的事？','  2. 他們會從哪些最原始的資料開始，而不是用別人整理過的二手資料？','  3. 他們會用哪些具體的方法、框架和工具？','  4. 除了你跟我之外，還有什麼可以證明這個結果是對的？','- 把標準設在業界頂尖的水準。遇到限制時，先提出突破的辦法，不要直接降低標準。');
+  if(V.chal)L.push('- 開始之前，找出我這個需求裡 1–3 個可能站不住腳的假設，用背景資料或常理檢驗它們，並說明這會怎麼影響你的做法。');
+  L.push('');
   L.push('# 背景資訊');
   if(V.company)L.push(`- 公司／產業：${V.company}`);
   L.push(`- 我的部門：${dept.name}`,...fv.map(a=>`- ${a[0]}：${a[1]}`));
@@ -437,7 +459,10 @@ function genPrompt(x,dept,V){
   const qs=['內容具體、可直接使用，有數字或例子支撐',en?'英文要自然、專業，符合國際商務寫作習慣':'使用繁體中文與台灣慣用的職場用語'];
   if(V.tbd)qs.push('無法確認的數據或事實，標示【待確認】並說明假設，絕不捏造');
   L.push('# 品質標準',...qs.map(s=>'- '+s));
-  if(V.crit)L.push('','交付前，請依以下清單自我檢查並修正，只輸出修正後的最終版本，不必列出檢查過程：',...[...K.check,'是否符合所有具體要求與輸出格式'].map(s=>'- '+s));
+  // 廣度：真的做審稿者的工作，而不是自己打分數
+  if(V.crit)L.push('','# 審稿','完成初稿後，請一位專門挑毛病的審稿者，照審稿者平常的工作方式檢查：找出這份初稿最可能出錯或最站不住腳的 3 個地方，每一點都附上理由或依據，修正後交出最終版本（不必列出審稿過程）。審稿時特別注意：',...[...K.check,'是否符合所有具體要求與輸出格式'].map(s=>'- '+s));
+  // 深度：外部裁判
+  L.push('','# 驗收方式','在產出最後，列出 2–3 個能在真實情境中驗證這份成果是否有效的方法或指標，不要用你自己的評分代替。可以參考：',...K.verify.map(s=>'- '+s));
   L.push('','# 進行方式');
   if(V.ask)L.push('開始前，先一次列出 3–5 個你最需要釐清的問題，並附上你建議的預設答案；等我回答後再開始產出。');
   else L.push('請直接開始產出。'+(V.tbd?'資訊不足的地方，依最合理的假設完成並標示【待確認】。':''));
@@ -471,7 +496,7 @@ function renderForm(clear){
   $('sTitle').textContent=`${d.name}｜${x[0]}`;
   $('sRole').textContent=`AI 角色設定：${x[2]}`;
   $('goal').placeholder='例：'+x[3];
-  document.querySelector('label[for=desc]').innerHTML=(x[1]==='image'?'畫面主體與場景':'任務簡述')+'<em>必填</em>';
+  document.querySelector('label[for=desc]').innerHTML=(x[1]==='image'?'畫面主體與場景':'要交付的東西')+'<em>必填</em>';
   $('desc').placeholder='例：'+x[4];
   $('aud').placeholder='例：'+AUD_EX[d.id];
   $('dyn').innerHTML=x[5].map((f,k)=>`<div class="field"><label for="f${k}">${f[0]}</label><input id="f${k}" placeholder="${isPaste(f[1])?f[1]:'例：'+f[1]}"></div>`).join('');
@@ -494,7 +519,7 @@ function collect(){
   KCTL[x[1]].forEach(([key])=>{if(key!=='imgText'){k[key]=val('k_'+key);kindVals[key]=k[key]}});
   return {goal:val('goal'),desc:val('desc'),aud:val('aud'),bg:val('bg'),company:val('company'),
     f:x[5].map((_,i)=>val('f'+i)),k,imgText:val('imgText'),
-    ask:$('oAsk').checked,multi:$('oMulti').checked,crit:$('oCrit').checked,tbd:$('oTbd').checked};
+    ask:$('oAsk').checked,multi:$('oMulti').checked,crit:$('oCrit').checked,tbd:$('oTbd').checked,deep:$('oDeep').checked,up:$('oUp').checked,chal:$('oChal').checked};
 }
 const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 function build(){
@@ -509,7 +534,7 @@ function build(){
   $('out').dataset.raw=text;
   $('count').textContent=`${text.length.toLocaleString()} 字`;
   $('tool').innerHTML='建議工具：'+KINDS[x[1]].tool;
-  const parts=[['目的',V.goal,22],[x[1]==='image'?'畫面主體與場景':'任務簡述',V.desc,22],['目標受眾',V.aud,14],['公司／品牌與產業',V.company,10],[x[5][0][0],V.f[0],11],[x[5][1][0],V.f[1],11],['背景資料',V.bg,10]];
+  const parts=[['完成後希望發生的事',V.goal,22],[x[1]==='image'?'畫面主體與場景':'要交付的東西',V.desc,22],['目標受眾',V.aud,14],['公司／品牌與產業',V.company,10],[x[5][0][0],V.f[0],11],[x[5][1][0],V.f[1],11],['背景資料',V.bg,10]];
   const score=parts.reduce((s,p)=>s+(p[1]?p[2]:0),0);
   $('pct').textContent=score+'%';$('bar').style.width=score+'%';
   const miss=parts.find(p=>!p[1]);
