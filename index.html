@@ -105,6 +105,8 @@ h1 .hl{color:var(--accent);transition:color .25s}
 .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:6px 14px}
 .opts label{display:flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer}
 .opts input{margin-top:4px;accent-color:var(--accent)}
+.note{display:flex;flex-direction:column;gap:4px;font-size:12px;line-height:1.6;color:var(--muted)}
+.note p{margin:0}
 
 /* output */
 .out{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
@@ -198,6 +200,10 @@ pre.prompt .tag{color:#9fb7c9}
           <label><input type="checkbox" id="oAsk">開始前先問我關鍵問題，再產出</label>
           <label><input type="checkbox" id="oMulti">提供多個版本讓我挑選</label>
           <label><input type="checkbox" id="oTbd" checked>資訊不足時標示【待確認】，不可捏造</label>
+        </div>
+        <div class="note">
+          <p>「讓 AI 先提出更好的做法」比較適合看結果的工作，例如報告、會議、流程，不太適合偏創作的工作，所以圖片類場景不會加入這一項。</p>
+          <p>開啟深度模式後，提示詞大約會多 40%，主流 AI 工具都能處理這個長度。只想快速產出時，可以取消勾選「深度模式」，提示詞會短一些。</p>
         </div>
       </div>
     </section>
